@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/scheduled.js": {
+      "schedule": "0 * * * *"
+    }
+  }
+}
