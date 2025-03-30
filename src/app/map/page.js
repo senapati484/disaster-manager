@@ -6,6 +6,25 @@ import "leaflet/dist/leaflet.css";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import dynamic from "next/dynamic";
+// import { useMap } from "react-leaflet";
+
+// const MapContainer = dynamic(
+//   () => import("react-leaflet").then((mod) => mod.MapContainer),
+//   { ssr: false }
+// );
+// const TileLayer = dynamic(
+//   () => import("react-leaflet").then((mod) => mod.TileLayer),
+//   { ssr: false }
+// );
+// const Marker = dynamic(
+//   () => import("react-leaflet").then((mod) => mod.Marker),
+//   { ssr: false }
+// );
+// const useMap = dynamic(
+//   () => import("react-leaflet").then((mod) => mod.useMap),
+//   { ssr: false }
+// );
 
 // Function to fetch disaster data from EONET API
 const fetchAllDisasterData = async () => {
@@ -91,6 +110,7 @@ export default function InteractiveMapPage() {
 
   // Monitor online/offline status
   useEffect(() => {
+    if (typeof window === "undefined") return; // Ensure it's running in the browser
     const handleOffline = () => setOffline(true);
     const handleOnline = () => setOffline(false);
     window.addEventListener("offline", handleOffline);

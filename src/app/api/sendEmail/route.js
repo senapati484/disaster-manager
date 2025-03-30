@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 // src/app/api/sendEmail/route.js
 
 import nodemailer from "nodemailer";

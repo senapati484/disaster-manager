@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -7,6 +8,7 @@ import { auth, provider } from "@/utils/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Image from "next/image";
 
 export default function Profile() {
   const router = useRouter();
