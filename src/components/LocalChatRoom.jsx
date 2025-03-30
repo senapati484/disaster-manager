@@ -20,7 +20,12 @@ const calculateGridCell = (lat, lon) => {
 };
 
 const getChatRef = (gridCell, chatType, userData) => {
-  if (chatType === "volunteer" && userData?.volunteer) {
+  if (chatType === "volunteer") {
+    if (!userData?.isVolunteer) {
+      throw new Error(
+        "This chat is only accessible to verified volunteers. Please complete your volunteer verification first."
+      );
+    }
     return ref(database, "volunteerChat");
   }
   return ref(database, `chatRooms/${gridCell}/messages`);
@@ -119,7 +124,7 @@ export default function LocalChatRoom({ chatType = "local" }) {
           `https://via.placeholder.com/40?text=${user.displayName?.[0] || "A"}`,
         message: input.trim(),
         timestamp: new Date().toLocaleTimeString(),
-        isVolunteer: userData.data?.volunteer || false,
+        isVolunteer: userData.data?.isVolunteer || false,
       };
 
       await set(newMessageRef, newMessage);

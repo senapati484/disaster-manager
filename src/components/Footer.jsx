@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 
 const Footer = () => {
   const pathname = usePathname();
-  const hiddenPaths = ["/map", "/chat", "/guides", "/login"];
+  const hiddenPaths = ["/map", "/chat", "/guides", "/login", "/volunteer"];
   const isVisible = !hiddenPaths.includes(pathname);
   if (!isVisible) return null;
 

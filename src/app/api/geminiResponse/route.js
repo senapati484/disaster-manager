@@ -54,9 +54,12 @@ export async function POST(req) {
     });
   } catch (error) {
     console.error("Error calling tuned Gemini API:", error);
+    const errorMessage = error.message.includes("SAFETY")
+      ? "Your query was blocked due to safety filters. Please try rephrasing your question."
+      : "Failed to get response from tuned Gemini API";
     return new Response(
       JSON.stringify({
-        error: "Failed to get response from tuned Gemini API",
+        error: errorMessage,
         details: error.message,
       }),
       {

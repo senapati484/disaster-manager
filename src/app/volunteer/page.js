@@ -6,9 +6,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { database } from "@/utils/firebase";
-import { ref, onValue, push, set } from "firebase/database";
+import { ref, onValue, push, set, update } from "firebase/database";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import VolunteerChat from "@/components/VolunteerChat";
 
 export default function VolunteerPage() {
   const { user } = useAuth();
@@ -17,15 +18,15 @@ export default function VolunteerPage() {
   const [donationAmount, setDonationAmount] = useState("");
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(false);
-
   const [documentStatus, setDocumentStatus] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [driveLink, setDriveLink] = useState("");
 
   useEffect(() => {
     if (user) {
-      // Fetch user's volunteer status and document status
+      // Subscribe to user data
       const userRef = ref(database, `users/${user.uid}`);
-      onValue(userRef, (snapshot) => {
+      const unsubscribeUser = onValue(userRef, (snapshot) => {
         const userData = snapshot.val();
         setIsVolunteer(userData?.volunteer || false);
         setDocumentStatus(userData?.documentStatus || null);
@@ -33,7 +34,7 @@ export default function VolunteerPage() {
 
       // Subscribe to notifications
       const notificationsRef = ref(database, `notifications/${user.uid}`);
-      onValue(notificationsRef, (snapshot) => {
+      const unsubscribeNotifs = onValue(notificationsRef, (snapshot) => {
         const notifData = snapshot.val();
         if (notifData) {
           const notifList = Object.values(notifData).sort(
@@ -45,7 +46,7 @@ export default function VolunteerPage() {
 
       // Subscribe to volunteer alerts
       const alertsRef = ref(database, "volunteerAlerts");
-      onValue(alertsRef, (snapshot) => {
+      const unsubscribeAlerts = onValue(alertsRef, (snapshot) => {
         const alertsData = snapshot.val();
         if (alertsData) {
           const alertsList = Object.values(alertsData).map((alert) => ({
@@ -58,7 +59,7 @@ export default function VolunteerPage() {
 
       // Subscribe to donations
       const donationsRef = ref(database, "donations");
-      onValue(donationsRef, (snapshot) => {
+      const unsubscribeDonations = onValue(donationsRef, (snapshot) => {
         const donationsData = snapshot.val();
         if (donationsData) {
           const donationsList = Object.entries(donationsData)
@@ -70,19 +71,38 @@ export default function VolunteerPage() {
           setDonations(donationsList);
         }
       });
+
+      // Cleanup subscriptions on unmount
+      return () => {
+        unsubscribeUser();
+        unsubscribeNotifs();
+        unsubscribeAlerts();
+        unsubscribeDonations();
+      };
     }
-  }, [user, isVolunteer]);
+  }, [user]);
 
   useEffect(() => {
-    if (user && documentStatus === "approved") {
-      set(ref(database, `users/${user.uid}/volunteer`), true);
-      setIsVolunteer(true);
+    if (user) {
+      const userRef = ref(database, `users/${user.uid}`);
+      return onValue(userRef, (snapshot) => {
+        const userData = snapshot.val();
+        if (userData?.documentStatus === "approved") {
+          update(userRef, {
+            isVolunteer: true,
+            volunteer: true,
+          });
+          setIsVolunteer(true);
+          setDocumentStatus("approved");
+        } else {
+          setDocumentStatus(userData?.documentStatus || null);
+        }
+      });
     }
-  }, [user, documentStatus]);
+  }, [user]);
 
   const handleDonation = async () => {
     if (!user || !donationAmount || loading) return;
-
     try {
       setLoading(true);
       const amount = parseFloat(donationAmount);
@@ -90,7 +110,6 @@ export default function VolunteerPage() {
         alert("Please enter a valid donation amount");
         return;
       }
-
       const donationRef = push(ref(database, "donations"));
       await set(donationRef, {
         userId: user.uid,
@@ -124,7 +143,6 @@ export default function VolunteerPage() {
           },
         ],
       });
-
       setDonationAmount("");
       toast.success("Thank You!", {
         description: "Your donation has been processed successfully.",
@@ -139,16 +157,133 @@ export default function VolunteerPage() {
     }
   };
 
+  // Handler for submitting the Google Drive link
+  const handleSubmitDocuments = async (e) => {
+    e.preventDefault();
+    if (!driveLink) {
+      toast.error("Please enter a valid Google Drive link.");
+      return;
+    }
+    if (!driveLink.includes("drive.google.com")) {
+      toast.error("Invalid Link", {
+        description: "Please provide a valid Google Drive link.",
+      });
+      return;
+    }
+    try {
+      const userRef = ref(database, `users/${user.uid}`);
+      // Update the user's record with the submitted link and mark documentStatus as pending
+      await update(userRef, {
+        documentStatus: "pending",
+        documentLink: driveLink,
+        documentSubmittedAt: Date.now(),
+      });
+      setDocumentStatus("pending");
+      toast.success("Documents Submitted", {
+        description:
+          "We'll review your application and notify you once approved.",
+      });
+    } catch (error) {
+      console.error("Error submitting document link:", error);
+      toast.error("Submission Failed", {
+        description:
+          error.message || "Failed to submit document link. Please try again.",
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Volunteer Dashboard</h1>
       </div>
 
-      {isVolunteer && (
+      {user && isVolunteer ? (
+        // If the user is an approved volunteer, show the volunteer chat.
+        <VolunteerChat />
+      ) : documentStatus === "pending" ? (
+        // If submission is pending, show pending status.
+        <Card className="p-4 bg-yellow-50 border-yellow-200">
+          <h3 className="text-lg font-semibold">
+            Document Verification Pending
+          </h3>
+          <p className="text-gray-600">
+            Your volunteer application is being reviewed. We'll notify you once
+            it's approved.
+          </p>
+        </Card>
+      ) : (
+        // Otherwise, show the application form along with document instructions.
         <>
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Become a Volunteer</h2>
+            <p className="text-gray-600 mb-4">
+              To become a volunteer, please enter the Google Drive link to your
+              uploaded identification documents. We'll review your application
+              and get back to you shortly.
+            </p>
+            <form onSubmit={handleSubmitDocuments}>
+              <div className="space-y-4">
+                <div className="flex flex-col space-y-2">
+                  <label
+                    htmlFor="document-link"
+                    className="text-sm font-medium text-gray-700"
+                  >
+                    Document Drive Link
+                  </label>
+                  <Input
+                    type="url"
+                    id="document-link"
+                    placeholder="Paste your Google Drive link here"
+                    value={driveLink}
+                    onChange={(e) => setDriveLink(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full">
+                  Submit Application
+                </Button>
+              </div>
+            </form>
+          </Card>
+
+          {/* Document Instructions Section */}
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">
+              Document Upload Instructions
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-medium text-yellow-800 mb-2">
+                  Required Documents:
+                </h3>
+                <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
+                  <li>
+                    Government-issued ID (Passport, Driver's License, or
+                    National ID)
+                  </li>
+                  <li>
+                    Proof of address (Utility Bill, Bank Statement, less than 3
+                    months old)
+                  </li>
+                  <li>Background check consent form (PDF format)</li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-medium text-yellow-800 mb-2">
+                  Acceptable File Types:
+                </h3>
+                <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
+                  <li>Images: JPG, PNG (max 5MB each)</li>
+                  <li>Documents: PDF (max 10MB each)</li>
+                  <li>Ensure scanned copies are clear and legible</li>
+                </ul>
+              </div>
+            </div>
+          </Card>
+
           {/* Alerts Section */}
-          <Card className="p-4">
+          <Card className="p-4 mt-6">
             <h2 className="text-xl font-semibold mb-4">Volunteer Alerts</h2>
             <div className="space-y-4">
               {alerts.map((alert) => (
@@ -272,184 +407,6 @@ export default function VolunteerPage() {
                   {donations.length === 0 && (
                     <p className="text-gray-500">No donations yet</p>
                   )}
-                </div>
-              </div>
-            </div>
-          </Card>
-        </>
-      )}
-
-      {!isVolunteer && (
-        <>
-          {documentStatus && (
-            <Card className="p-4 mb-4">
-              <h2 className="text-lg font-semibold mb-2">
-                Verification Status
-              </h2>
-              <div
-                className={`p-3 rounded-lg ${
-                  documentStatus === "pending"
-                    ? "bg-yellow-50 text-yellow-800"
-                    : documentStatus === "approved"
-                    ? "bg-green-50 text-green-800"
-                    : documentStatus === "rejected"
-                    ? "bg-red-50 text-red-800"
-                    : ""
-                }`}
-              >
-                <p className="font-medium">
-                  {documentStatus === "pending" &&
-                    "Your documents are being reviewed"}
-                  {documentStatus === "approved" &&
-                    "Your documents have been approved!"}
-                  {documentStatus === "rejected" &&
-                    "Your documents were not approved. Please submit new documents."}
-                </p>
-              </div>
-            </Card>
-          )}
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4 text-center">
-              Become a Volunteer
-            </h2>
-            <p className="text-gray-600 mb-6 text-center">
-              Please upload your identification documents for verification. Once
-              verified, you'll be able to access volunteer features and help
-              others in need.
-            </p>
-            <div className="space-y-4">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <div className="space-y-4">
-                  <div className="flex flex-col space-y-2">
-                    <label
-                      htmlFor="document-link"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Document Drive Link
-                    </label>
-                    <input
-                      type="url"
-                      id="document-link"
-                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Paste your Google Drive document link here"
-                      onChange={async (e) => {
-                        const link = e.target.value;
-                        if (!link) return;
-
-                        if (!link.includes("drive.google.com")) {
-                          toast.error("Invalid Link", {
-                            description:
-                              "Please provide a valid Google Drive link.",
-                          });
-                          return;
-                        }
-
-                        try {
-                          if (!user?.uid) {
-                            toast.error("Authentication Error", {
-                              description:
-                                "Please sign in to submit documents.",
-                            });
-                            return;
-                          }
-
-                          // Create a batch update for atomic operations
-                          const updates = {};
-                          const timestamp = Date.now();
-
-                          // Verification record data
-                          updates[`verifications/${user.uid}`] = {
-                            userId: user.uid,
-                            documentStatus: "pending",
-                            documentSubmitted: true,
-                            documentTimestamp: timestamp,
-                            documentLink: link,
-                            userEmail: user.email,
-                            userName: user.displayName || "Anonymous",
-                            submissionAttempts: 1,
-                            lastUpdated: timestamp,
-                          };
-
-                          // User record data
-                          updates[`users/${user.uid}`] = {
-                            documentStatus: "pending",
-                            documentSubmitted: true,
-                            documentTimestamp: timestamp,
-                            lastUpdated: timestamp,
-                          };
-
-                          // Perform atomic update
-                          await update(ref(database), updates);
-
-                          toast.success("Document Submitted", {
-                            description:
-                              "Our team will verify your documents shortly.",
-                          });
-                        } catch (error) {
-                          console.error(
-                            "Error submitting document link:",
-                            error
-                          );
-                          toast.error("Submission Failed", {
-                            description:
-                              error.message ||
-                              "Failed to submit document link. Please try again.",
-                          });
-                        }
-                      }}
-                    />
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    Make sure your documents are uploaded to Google Drive and
-                    shared with "Anyone with the link can view" permission
-                  </p>
-                </div>
-              </div>
-              <div className="bg-yellow-50 p-4 rounded-lg space-y-4">
-                <div>
-                  <h3 className="font-medium text-yellow-800 mb-2">
-                    Document Upload Instructions:
-                  </h3>
-                  <ol className="list-decimal list-inside text-sm text-yellow-700 space-y-1">
-                    <li>Upload your documents to Google Drive</li>
-                    <li>
-                      Make sure to set the document's sharing settings to
-                      "Anyone with the link can view"
-                    </li>
-                    <li>
-                      Copy the sharing link and paste it in the document
-                      submission form
-                    </li>
-                    <li>
-                      Our team will verify your documents within 24-48 hours
-                    </li>
-                  </ol>
-                </div>
-                <div>
-                  <h3 className="font-medium text-yellow-800 mb-2">
-                    Required Documents:
-                  </h3>
-                  <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
-                    <li>
-                      Government-issued ID (Passport, Driver's License, National
-                      ID)
-                    </li>
-                    <li>
-                      Proof of address (Utility Bill, Bank Statement, less than
-                      3 months old)
-                    </li>
-                    <li>Background check consent form (PDF format)</li>
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="font-medium text-yellow-800 mb-2">
-                    Acceptable File Types:
-                  </h3>
-                  <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
-                    <li>Images: JPG, PNG (max 5MB each)</li>
-                    <li>Documents: PDF (max 10MB each)</li>
-                    <li>Scanned copies must be clear and legible</li>
-                  </ul>
                 </div>
               </div>
             </div>
