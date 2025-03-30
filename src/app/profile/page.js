@@ -68,10 +68,12 @@ export default function Profile() {
   // Handler to update the user profile in Firebase.
   const handleUpdate = async (e) => {
     e.preventDefault();
-    // Prepare updated data.
+    // Prepare updated data while preserving existing fields
     const updatedData = {
+      ...profileData, // Keep all existing fields
       name: user.displayName,
       email: user.email,
+      isVolunteer: false,
       location: { lat: latInput, lon: lonInput },
     };
 
@@ -158,40 +160,46 @@ export default function Profile() {
             <strong>Location:</strong>{" "}
             {latInput && lonInput ? `${latInput}, ${lonInput}` : "Not set"}
           </p>
-          {profileData.volunteer && (
-            <div className="mt-2 flex items-center justify-between">
-              <p>
-                <strong>Volunteer Status:</strong>{" "}
-                <span className="text-green-600">Active</span>
-              </p>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={async () => {
-                  try {
-                    const updatedData = {
-                      ...profileData,
-                      volunteer: false,
-                    };
-                    const res = await fetch(`/api/data?uid=${user.uid}`, {
-                      method: "PUT",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(updatedData),
-                    });
-                    if (res.ok) {
-                      setProfileData(updatedData);
-                      alert("Volunteer status updated successfully!");
-                    } else {
+          {profileData.isVolunteer && (
+            <div className="mt-2">
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 mb-2">
+                <span className="mr-1">🌟</span>
+                Volunteer
+              </div>
+              <div className="flex items-center justify-between">
+                <p>
+                  <strong>Volunteer Status:</strong>{" "}
+                  <span className="text-green-600">Active</span>
+                </p>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const updatedData = {
+                        ...profileData, // Keep all existing fields
+                        isVolunteer: false, // Only update volunteer status
+                      };
+                      const res = await fetch(`/api/data?uid=${user.uid}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(updatedData),
+                      });
+                      if (res.ok) {
+                        setProfileData(updatedData);
+                        alert("Volunteer status updated successfully!");
+                      } else {
+                        alert("Error updating volunteer status");
+                      }
+                    } catch (error) {
+                      console.error("Error updating volunteer status:", error);
                       alert("Error updating volunteer status");
                     }
-                  } catch (error) {
-                    console.error("Error updating volunteer status:", error);
-                    alert("Error updating volunteer status");
-                  }
-                }}
-              >
-                Cancel Volunteer Status
-              </Button>
+                  }}
+                >
+                  Cancel Volunteer Status
+                </Button>
+              </div>
             </div>
           )}
         </div>

@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { database } from "@/utils/firebase";
 import { ref, onValue, push, set } from "firebase/database";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 export default function VolunteerPage() {
   const { user } = useAuth();
@@ -125,10 +126,14 @@ export default function VolunteerPage() {
       });
 
       setDonationAmount("");
-      alert("Thank you for your donation!");
+      toast.success("Thank You!", {
+        description: "Your donation has been processed successfully.",
+      });
     } catch (error) {
       console.error("Error processing donation:", error);
-      alert("Failed to process donation. Please try again.");
+      toast.error("Donation Failed", {
+        description: "Failed to process donation. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -329,49 +334,67 @@ export default function VolunteerPage() {
                       placeholder="Paste your Google Drive document link here"
                       onChange={async (e) => {
                         const link = e.target.value;
-                        if (link && link.includes("drive.google.com")) {
-                          try {
-                            // Create a new verification record in verifications collection
-                            const verificationsRef = ref(
-                              database,
-                              `verifications/${user.uid}`
-                            );
-                            await set(verificationsRef, {
-                              userId: user.uid,
-                              documentStatus: "pending",
-                              documentSubmitted: true,
-                              documentTimestamp: Date.now(),
-                              documentLink: link,
-                              userEmail: user.email,
-                              userName: user.displayName || "Anonymous",
+                        if (!link) return;
+
+                        if (!link.includes("drive.google.com")) {
+                          toast.error("Invalid Link", {
+                            description:
+                              "Please provide a valid Google Drive link.",
+                          });
+                          return;
+                        }
+
+                        try {
+                          if (!user?.uid) {
+                            toast.error("Authentication Error", {
+                              description:
+                                "Please sign in to submit documents.",
                             });
-
-                            // Update user's document status reference
-                            const userRef = ref(database, `users/${user.uid}`);
-                            await set(
-                              userRef,
-                              {
-                                documentStatus: "pending",
-                                documentSubmitted: true,
-                                documentTimestamp: Date.now(),
-                              },
-                              { merge: true }
-                            );
-
-                            alert(
-                              "Document link submitted successfully! Our team will verify your documents shortly."
-                            );
-                          } catch (error) {
-                            console.error(
-                              "Error submitting document link:",
-                              error
-                            );
-                            alert(
-                              "Failed to submit document link. Please try again."
-                            );
+                            return;
                           }
-                        } else {
-                          alert("Please provide a valid Google Drive link.");
+
+                          // Create a batch update for atomic operations
+                          const updates = {};
+                          const timestamp = Date.now();
+
+                          // Verification record data
+                          updates[`verifications/${user.uid}`] = {
+                            userId: user.uid,
+                            documentStatus: "pending",
+                            documentSubmitted: true,
+                            documentTimestamp: timestamp,
+                            documentLink: link,
+                            userEmail: user.email,
+                            userName: user.displayName || "Anonymous",
+                            submissionAttempts: 1,
+                            lastUpdated: timestamp,
+                          };
+
+                          // User record data
+                          updates[`users/${user.uid}`] = {
+                            documentStatus: "pending",
+                            documentSubmitted: true,
+                            documentTimestamp: timestamp,
+                            lastUpdated: timestamp,
+                          };
+
+                          // Perform atomic update
+                          await update(ref(database), updates);
+
+                          toast.success("Document Submitted", {
+                            description:
+                              "Our team will verify your documents shortly.",
+                          });
+                        } catch (error) {
+                          console.error(
+                            "Error submitting document link:",
+                            error
+                          );
+                          toast.error("Submission Failed", {
+                            description:
+                              error.message ||
+                              "Failed to submit document link. Please try again.",
+                          });
                         }
                       }}
                     />

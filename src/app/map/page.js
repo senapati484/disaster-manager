@@ -50,9 +50,8 @@ const incidentMarkers = [
 function MapControls() {
   const map = useMap();
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[90] flex gap-4 bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-lg">
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex gap-4 bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-lg">
       <Button
-        className="z-[100]"
         onClick={() => {
           if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {

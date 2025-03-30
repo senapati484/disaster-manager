@@ -105,6 +105,8 @@ export default function AssistantChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: input }),
       });
+      console.log("Response from Gemini API:", res);
+
       if (!res.ok) {
         throw new Error("Network response was not ok");
       }

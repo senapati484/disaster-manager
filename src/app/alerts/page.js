@@ -111,26 +111,54 @@ export default function AlertsPage() {
     if (!userLocation) return;
     try {
       const { lat, lon } = userLocation;
-      const res = await fetch(`/api/disaster?lat=${lat}&lon=${lon}&radius=500`);
-      if (!res.ok) throw new Error("Failed to fetch disaster data");
-      const json = await res.json();
-      const newDisasters = json.events;
+      // First check if we have data in the database
+      const dbRes = await fetch(`/api/data?uid=${userId}`);
+      if (!dbRes.ok) throw new Error("Failed to fetch database data");
+      const dbJson = await dbRes.json();
+      let newDisasters = [];
 
-      // Compare new data with previously loaded data.
-      // (Simple deep comparison with JSON.stringify. Use a proper deep compare if needed.)
+      // If no data in database or empty disaster array, fetch from API
+      if (!dbJson.data?.disaster || dbJson.data.disaster.length === 0) {
+        const apiRes = await fetch(
+          `/api/disaster?lat=${lat}&lon=${lon}&radius=500`
+        );
+        if (!apiRes.ok)
+          throw new Error("Failed to fetch disaster data from API");
+        const apiJson = await apiRes.json();
+        newDisasters = apiJson.events;
+
+        if (newDisasters.length === 0) {
+          toast("No Disasters Found", {
+            description: "No disasters found in your location at this time.",
+          });
+          setDisasters([]);
+          prevDisastersRef.current = [];
+          return;
+        }
+      } else {
+        newDisasters = dbJson.data.disaster;
+      }
+
+      // Handle notifications and state updates
       if (!hasSentInitialEmail && newDisasters.length > 0) {
         // Initial load with disasters - send comprehensive email
         setDisasters(newDisasters);
         prevDisastersRef.current = newDisasters;
         await sendEmailNotification(newDisasters);
         setHasSentInitialEmail(true);
+        toast("Disaster Alert", {
+          description: `${newDisasters.length} disaster(s) detected in your area. Email notification sent.`,
+        });
       } else if (
         JSON.stringify(newDisasters) !==
         JSON.stringify(prevDisastersRef.current)
       ) {
-        // Subsequent updates - silent refresh without notification
+        // Subsequent updates - notify user of changes
         setDisasters(newDisasters);
         prevDisastersRef.current = newDisasters;
+        toast("Updated Disasters", {
+          description: `Disaster data has been updated. ${newDisasters.length} events found.`,
+        });
       }
     } catch (err) {
       console.error("Error fetching disaster data:", err);
