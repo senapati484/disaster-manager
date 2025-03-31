@@ -7,13 +7,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 // import { useMap } from "react-leaflet";
 
 // const MapContainer = dynamic(
 //   () => import("react-leaflet").then((mod) => mod.MapContainer),
 //   { ssr: false }
 // );
-// const TileLayer = dynamic(
+// const TileLayer = dynamic(\][']
 //   () => import("react-leaflet").then((mod) => mod.TileLayer),
 //   { ssr: false }
 // );
@@ -229,7 +230,9 @@ export default function InteractiveMapPage() {
                 </p>
               )}
               <div className="mt-4 flex gap-2">
-                <Button variant="outline">View Survival Guide</Button>
+                <Button variant="outline">
+                  <Link href="guides">View Survival Guide</Link>
+                </Button>
                 <Button>
                   <a href={selectedMarker.link}>
                     <span className="text-sm font-bold">Link</span>
