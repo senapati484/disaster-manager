@@ -25,7 +25,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const lat = parseFloat(searchParams.get("lat"));
     const lon = parseFloat(searchParams.get("lon"));
-    const radius = parseFloat(searchParams.get("radius")) || 500;
+    const radius = parseFloat(searchParams.get("radius")) || 50;
 
     if (isNaN(lat) || isNaN(lon)) {
       return NextResponse.json(
