@@ -1,12 +1,12 @@
 {
   "crons": [
     {
-      "path": "/api/scheduled",
+      "path": "/api/syncDisasters",
       "schedule": "0 5 * * *"
     }
   ],
   "functions": {
-    "api/scheduled": {
+    "api/syncDisasters": {
       "memory": 1024,
       "maxDuration": 10
     },
