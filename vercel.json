@@ -6,11 +6,11 @@
     }
   ],
   "functions": {
-    "api/syncDisasters": {
+    "/api/syncDisasters": {
       "memory": 1024,
       "maxDuration": 10
     },
-    "api/**/*.js": {
+    "/api/**": {
       "maxDuration": 50
     }
   }
