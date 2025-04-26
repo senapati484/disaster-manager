@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 
+// Dynamically import only React-Leaflet components (hooks must be imported normally in a client component)
 const MapContainer = dynamic(
   () => import("react-leaflet").then((mod) => mod.MapContainer),
   { ssr: false }
@@ -22,31 +23,15 @@ const Marker = dynamic(
   { ssr: false }
 );
 
-const useMap = dynamic(
-  () => import("react-leaflet").then((mod) => mod.useMap),
-  { ssr: false }
-);
+// We will import useMap normally inside MapControls component below
 
-// Import leaflet CSS
-import "leaflet/dist/leaflet.css";
-// import { useMap } from "react-leaflet";
-
-// const MapContainer = dynamic(
-//   () => import("react-leaflet").then((mod) => mod.MapContainer),
-//   { ssr: false }
-// );
-// const TileLayer = dynamic(\][']
-//   () => import("react-leaflet").then((mod) => mod.TileLayer),
-//   { ssr: false }
-// );
-// const Marker = dynamic(
-//   () => import("react-leaflet").then((mod) => mod.Marker),
-//   { ssr: false }
-// );
 // const useMap = dynamic(
 //   () => import("react-leaflet").then((mod) => mod.useMap),
 //   { ssr: false }
 // );
+
+// Import leaflet CSS
+import "leaflet/dist/leaflet.css";
 
 // Function to fetch disaster data from EONET API
 const fetchAllDisasterData = async () => {
@@ -88,7 +73,11 @@ const incidentMarkers = [
 ];
 
 // MapControls: A component rendered inside MapContainer that uses useMap()
+// We import useMap here in the client context
+
+// import { useMap } from "react-leaflet";
 function MapControls() {
+  const { useMap } = require("react-leaflet");
   const map = useMap();
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex gap-4 bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-lg">

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable react/no-unescaped-entities */
 "use client";
 
@@ -120,7 +121,7 @@ export default function AlertsPage() {
       // If no data in database or empty disaster array, fetch from API
       if (!dbJson.data?.disaster || dbJson.data.disaster.length === 0) {
         const apiRes = await fetch(
-          `/api/disaster?lat=${lat}&lon=${lon}&radius=500`
+          `/api/disaster?lat=${lat}&lon=${lon}&radius=50`
         );
         if (!apiRes.ok)
           throw new Error("Failed to fetch disaster data from API");
@@ -135,6 +136,13 @@ export default function AlertsPage() {
           prevDisastersRef.current = [];
           return;
         }
+
+        // Store the newly fetched disaster data in Firebase
+        await fetch(`/api/data?uid=${userId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ disaster: newDisasters }),
+        });
       } else {
         newDisasters = dbJson.data.disaster;
       }
@@ -169,7 +177,7 @@ export default function AlertsPage() {
   // Fetch user data on mount.
   useEffect(() => {
     fetchUserData();
-  }, [userId]);
+  }, [fetchUserData]);
 
   // Once userLocation is available, set up periodic fetching.
   useEffect(() => {
@@ -181,7 +189,7 @@ export default function AlertsPage() {
     const intervalId = setInterval(fetchDisasterData, 5 * 60 * 1000);
 
     return () => clearInterval(intervalId);
-  }, [userLocation]);
+  }, [userLocation, fetchDisasterData]);
 
   const filteredDisasters = disasters.filter((event) => {
     if (!search) return true;
