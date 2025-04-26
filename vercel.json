@@ -1,16 +1,16 @@
 {
   "crons": [
     {
-      "path": "/api/syncDisasters",
+      "path": "api/syncDisasters",
       "schedule": "0 5 * * *"
     }
   ],
   "functions": {
-    "/api/syncDisasters": {
+    "api/syncDisasters": {
       "memory": 1024,
       "maxDuration": 10
     },
-    "/api/**": {
+    "api/**": {
       "maxDuration": 50
     }
   }
