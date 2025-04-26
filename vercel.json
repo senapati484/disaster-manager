@@ -17,11 +17,11 @@
     }
   ],
   "functions": {
-    "api/syncDisasters": {
+    "src/app/api/syncDisasters/route.js": {
       "memory": 1024,
       "maxDuration": 10
     },
-    "api/**": {
+    "src/app/api/**/*.js": {
       "maxDuration": 50
     }
   }
