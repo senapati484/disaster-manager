@@ -4,6 +4,8 @@ import { database } from "@/utils/firebase";
 import { ref, set } from "firebase/database";
 import { NextResponse } from "next/server";
 
+export const runtime = "edge";
+
 export async function GET() {
   try {
     // Fetch disaster events from NASA's EONET API (open events)
@@ -18,12 +20,19 @@ export async function GET() {
     // Store (or replace) the entire data set in the "allDisaster" node
     await set(ref(database, "allDisaster"), events);
 
-    return NextResponse.json({
-      message: "Disaster data updated successfully.",
-      data: events,
-    });
+    return NextResponse.json(
+      { success: true, message: "Scheduled task completed successfully" },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error syncing disaster data:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Scheduled task failed",
+        error: error.message,
+      },
+      { status: 500 }
+    );
   }
 }

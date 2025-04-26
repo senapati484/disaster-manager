@@ -1,7 +1,14 @@
 {
+  "crons": [
+    {
+      "path": "/api/scheduled",
+      "schedule": "0 5 * * *"
+    }
+  ],
   "functions": {
-    "api/scheduled.js": {
-      "schedule": "0 * * * *"
+    "api/scheduled": {
+      "memory": 1024,
+      "maxDuration": 10
     }
   }
 }
